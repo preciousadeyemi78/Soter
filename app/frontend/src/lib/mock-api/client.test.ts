@@ -1,5 +1,4 @@
 import { fetchClient } from './client';
-import { handlers } from './handlers';
 
 // Mock environment variables
 process.env.NEXT_PUBLIC_USE_MOCKS = 'true';
@@ -20,10 +19,10 @@ describe('Mock API Client', () => {
 
   it('should route to mock handler when mocks are enabled', async () => {
     const fetchPromise = fetchClient('http://localhost:4000/health');
-    
+
     // Fast-forward time to skip the 500ms delay
     jest.advanceTimersByTime(500);
-    
+
     const response = await fetchPromise;
     const data = await response.json();
 
@@ -35,9 +34,9 @@ describe('Mock API Client', () => {
 
   it('should return mock aid packages', async () => {
     const fetchPromise = fetchClient('http://localhost:4000/aid-packages');
-    
+
     jest.advanceTimersByTime(500);
-    
+
     const response = await fetchPromise;
     const data = await response.json();
 
@@ -49,9 +48,9 @@ describe('Mock API Client', () => {
 
   it('should handle query parameters correctly', async () => {
     const fetchPromise = fetchClient('http://localhost:4000/aid-packages?status=pending&sort=desc');
-    
+
     jest.advanceTimersByTime(500);
-    
+
     const response = await fetchPromise;
     const data = await response.json();
 
@@ -62,9 +61,9 @@ describe('Mock API Client', () => {
 
   it('should handle relative URLs', async () => {
     const fetchPromise = fetchClient('/health');
-    
+
     jest.advanceTimersByTime(500);
-    
+
     const response = await fetchPromise;
     const data = await response.json();
 
