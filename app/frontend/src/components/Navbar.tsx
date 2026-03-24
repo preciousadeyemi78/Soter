@@ -17,6 +17,12 @@ export const Navbar: React.FC = () => {
           Soter
         </Link>
         <div className="flex items-center gap-4 flex-wrap">
+          <Link href="/dashboard" className="text-sm hover:underline">
+            Dashboard
+          </Link>
+          <Link href="/campaigns" className="text-sm hover:underline">
+            Campaigns
+          </Link>
           <EnvironmentIndicator />
           {publicKey && (
             <span className="text-sm">
