@@ -98,4 +98,46 @@ describe('Mock API Client', () => {
     // Reset env var
     process.env.NEXT_PUBLIC_USE_MOCKS = 'true';
   });
+
+  it('should create and retrieve campaign with mock API', async () => {
+    const createPromise = fetchClient('http://localhost:4000/campaigns', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Field Support', budget: 12000, metadata: { token: 'USDC', expiry: '2026-10-10' } }),
+    });
+
+    jest.advanceTimersByTime(500);
+
+    const createRes = await createPromise;
+    const createdJson = await createRes.json();
+
+    expect(createRes.status).toBe(201);
+    expect(createdJson.success).toBe(true);
+    expect(createdJson.data.name).toBe('Field Support');
+
+    const listPromise = fetchClient('http://localhost:4000/campaigns');
+    jest.advanceTimersByTime(500);
+    const listRes = await listPromise;
+    const listJson = await listRes.json();
+
+    expect(listRes.status).toBe(200);
+    expect(
+      Array.isArray(listJson.data) &&
+        listJson.data.some((campaign: { name: string }) => campaign.name === 'Field Support')
+    ).toBe(true);
+
+    const patchPromise = fetchClient(`http://localhost:4000/campaigns/${createdJson.data.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paused' }),
+    });
+
+    jest.advanceTimersByTime(500);
+    const patchRes = await patchPromise;
+    const patchJson = await patchRes.json();
+
+    expect(patchRes.status).toBe(200);
+    expect(patchJson.success).toBe(true);
+    expect(patchJson.data.status).toBe('paused');
+  });
 });

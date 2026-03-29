@@ -5,6 +5,7 @@ import { QueryProvider } from '@/lib/query-provider';
 import { Navbar } from '@/components/Navbar';
 import { ToastProvider } from '@/components/ToastProvider';
 import { ThemeProvider } from '@/components/ThemeProvider'; // Import ThemeProvider
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -34,6 +35,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-white text-blue-900 dark:bg-slate-950 dark:text-slate-50`}
       >
         <ThemeProvider> {/* Wrap with ThemeProvider */}
+        <ErrorBoundary>
           <QueryProvider>
             <ToastProvider>
               <Navbar />
@@ -41,6 +43,7 @@ export default function RootLayout({
             </ToastProvider>
           </QueryProvider>
         </ThemeProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
