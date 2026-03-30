@@ -121,14 +121,14 @@ export class AidEscrowController {
     @Body() dto: BatchCreateAidPackagesDto,
     @Req() req: any,
   ): Promise<any> {
-    try {
-      if (dto.recipientAddresses.length !== dto.amounts.length) {
-        throw new BadRequestException(
-          'Recipients and amounts arrays must have the same length',
-        );
-      }
+    if (dto.recipientAddresses.length !== dto.amounts.length) {
+      throw new BadRequestException(
+        'Recipients and amounts arrays must have the same length',
+      );
+    }
 
-      const operatorAddress = req.user?.address || 'admin';
+    const operatorAddress = req.user?.address || 'admin';
+    try {
       return await this.aidEscrowService.batchCreateAidPackages(
         dto,
         operatorAddress,
@@ -176,12 +176,12 @@ export class AidEscrowController {
     @Param('id') packageId: string,
     @Req() req: any,
   ): Promise<any> {
-    try {
-      const recipientAddress = req.user?.address;
-      if (!recipientAddress) {
-        throw new BadRequestException('Recipient address required');
-      }
+    const recipientAddress = req.user?.address;
+    if (!recipientAddress) {
+      throw new BadRequestException('Recipient address required');
+    }
 
+    try {
       return await this.aidEscrowService.claimAidPackage(
         { packageId },
         recipientAddress,

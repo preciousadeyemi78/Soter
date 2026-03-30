@@ -74,7 +74,7 @@ describe('AidEscrow Integration Tests', () => {
       const result = await service.createAidPackage(dto, operatorAddress);
 
       expect(result.metadata).toBeDefined();
-      expect(result.metadata?.operator).toBe(operatorAddress);
+      expect(result.metadata?.operatorAddress).toBe(operatorAddress);
     });
   });
 
@@ -153,7 +153,7 @@ describe('AidEscrow Integration Tests', () => {
       const result = await service.claimAidPackage(dto, recipientAddress);
 
       expect(result.metadata).toBeDefined();
-      expect(result.metadata?.recipient).toBe(recipientAddress);
+      expect(result.metadata?.recipientAddress).toBe(recipientAddress);
     });
   });
 
