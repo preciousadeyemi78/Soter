@@ -31,7 +31,8 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { LoggerService } from './logger/logger.service';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { AnalyticsModule } from './analytics/analytics.module';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { AidEscrowModule } from './onchain/aid-escrow.module';
 
 @Module({
   imports: [
@@ -76,11 +77,12 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AnalyticsModule,
     ThrottlerModule.forRoot([
       {
-        ttl: 60,       // 60 seconds window
+        ttl: 60000,       // 60 seconds window
         limit: 20,     // default: 20 req/min
       },
     ]),
   ],
+  AidEscrowModule,
 
   controllers: [AppController],
   providers: [
@@ -103,7 +105,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     },
      {
       provide: APP_GUARD,
-      useClass: ThrottlerModule, // rate-limiting guard runs after auth and role checks to avoid unnecessary counting of unauthenticated/unauthorized requests
+      useClass: ThrottlerGuard, // rate-limiting guard runs after auth and role checks to avoid unnecessary counting of unauthenticated/unauthorized requests
     },
   ],
 })

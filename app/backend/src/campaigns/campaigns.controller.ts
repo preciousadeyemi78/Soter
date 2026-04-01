@@ -8,6 +8,8 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBody,
@@ -21,6 +23,7 @@ import {
   ApiTags,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Request } from 'express';
 import { CampaignsService } from './campaigns.service';
 import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
@@ -28,6 +31,7 @@ import { ApiResponseDto } from '../common/dto/api-response.dto';
 import { Roles } from 'src/auth/roles.decorator';
 import { AppRole } from 'src/auth/app-role.enum';
 import { Throttle } from '@nestjs/throttler';
+import { OrgOwnershipGuard } from '../common/guards/org-ownership.guard';
 
 @ApiTags('Campaigns')
 @ApiBearerAuth('JWT-auth')
@@ -37,6 +41,7 @@ export class CampaignsController {
 
   @Post()
   @Roles(AppRole.admin, AppRole.ngo)
+  @UseGuards(OrgOwnershipGuard)
   @ApiOperation({ summary: 'Create a campaign' })
   @ApiBody({ type: CreateCampaignDto })
   @ApiCreatedResponse({ description: 'Campaign created successfully.' })
@@ -49,13 +54,18 @@ export class CampaignsController {
   @ApiForbiddenResponse({
     description: 'Access denied - insufficient permissions for this operation.',
   })
-  async create(@Body() dto: CreateCampaignDto) {
-    const campaign = await this.campaigns.create(dto);
+  async create(@Body() dto: CreateCampaignDto, @Req() req: Request) {
+    const campaign = await this.campaigns.create(dto, req.user?.ngoId);
     return ApiResponseDto.ok(campaign, 'Campaigns created successfully');
   }
-
+  
+  @Throttle({ default: { ttl: 60000, limit: 10 } }) // Limit to 10 requests per minute for this endpoint
   @Get()
-  @Throttle({ default: { ttl: 60, limit: 10 } }) // Limit to 10 requests per minute for this endpoint
+  @ApiOperation({
+    summary: 'List all campaigns',
+    description:
+      "Retrieves campaigns. NGO operators only see their own organization's campaigns.",
+  })
   @ApiOkResponse({ description: 'List of campaigns retrieved successfully.' })
   @ApiUnauthorizedResponse({
     description: 'Missing or invalid authentication credentials.',
@@ -63,12 +73,19 @@ export class CampaignsController {
   async list(
     @Query('includeArchived', new DefaultValuePipe(false), ParseBoolPipe)
     includeArchived: boolean,
+    @Req() req: Request,
   ) {
-    const campaigns = await this.campaigns.findAll(includeArchived);
+    // Scope to ngoId for NGO role; admins/operators see all
+    const ngoId = req.user?.role === AppRole.ngo ? req.user.ngoId : undefined;
+    const campaigns = await this.campaigns.findAll(includeArchived, ngoId);
     return ApiResponseDto.ok(campaigns, 'Campaigns fetched successfully');
   }
 
   @Get(':id')
+  @ApiOperation({
+    summary: 'Get campaign details',
+    description: 'Retrieves metadata and status for a specific campaign.',
+  })
   @ApiOkResponse({ description: 'Campaign details retrieved successfully.' })
   @ApiNotFoundResponse({ description: 'The specified campaign was not found.' })
   @ApiUnauthorizedResponse({
@@ -80,6 +97,12 @@ export class CampaignsController {
   }
 
   @Patch(':id')
+  @UseGuards(OrgOwnershipGuard)
+  @ApiOperation({
+    summary: 'Update a campaign',
+    description:
+      'Modifies existing campaign properties. Only provided fields are updated.',
+  })
   @ApiOkResponse({ description: 'Campaign updated successfully.' })
   @ApiNotFoundResponse({ description: 'The specified campaign was not found.' })
   @ApiBadRequestResponse({
@@ -96,6 +119,8 @@ export class CampaignsController {
     return ApiResponseDto.ok(updateData, 'Campaign updated successfully');
   }
 
+  @Patch(':id/archive')
+  @UseGuards(OrgOwnershipGuard)
   @ApiOperation({
     summary: 'Archive campaign (soft archive)',
     description:
