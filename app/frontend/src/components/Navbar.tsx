@@ -135,6 +135,13 @@ export function Navbar() {
 
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                Activity
+              </span>
+              <ActivityCenter />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                 Environment
               </span>
               <EnvironmentIndicator />
