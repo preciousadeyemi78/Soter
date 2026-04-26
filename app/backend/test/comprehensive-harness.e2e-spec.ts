@@ -5,7 +5,6 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { ONCHAIN_ADAPTER_TOKEN } from '../src/onchain/onchain.adapter';
 import { mockSorobanAdapter } from './mocks/external-services.mock';
-import { VerificationChannel } from '@prisma/client';
 
 describe('Comprehensive E2E Harness', () => {
   let app: INestApplication;
