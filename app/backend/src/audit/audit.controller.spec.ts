@@ -24,7 +24,9 @@ describe('AuditController', () => {
   };
 
   const mockAuditService = {
-    findLogs: jest.fn().mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 }),
+    findLogs: jest
+      .fn()
+      .mockResolvedValue({ data: [], total: 0, page: 1, limit: 50 }),
     exportLogs: jest.fn().mockResolvedValue(mockExportResult),
     buildCsv: jest.fn().mockReturnValue('id,actorHash,...\nlog-1,...'),
   };
