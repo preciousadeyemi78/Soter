@@ -132,7 +132,7 @@ export class LedgerBackfillService {
 
     // Simulate fetching ledger data from on-chain
     // In production, this would call the Stellar Horizon API
-    const ledgerData = await this.fetchLedgerRange(startLedger, endLedger);
+    const ledgerData = this.fetchLedgerRange(startLedger, endLedger);
 
     for (const entry of ledgerData) {
       if (existingIds.has(entry.id)) {
@@ -162,10 +162,7 @@ export class LedgerBackfillService {
     return { processed, skipped };
   }
 
-  private fetchLedgerRange(
-    _startLedger: number,
-    _endLedger: number,
-  ): any[] {
+  private fetchLedgerRange(_startLedger: number, _endLedger: number): any[] {
     // Placeholder for actual Horizon API call
     // In production, this would query the Stellar Horizon API
     return [];

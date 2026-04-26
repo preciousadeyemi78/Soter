@@ -1,13 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { MetricsService } from '../metrics/metrics.service';
 
-interface TracingContext {
-  operation: string;
-  service: string;
-  startTime: number;
-  metadata?: Record<string, unknown>;
-}
-
 @Injectable()
 export class TracingService {
   private readonly logger = new Logger(TracingService.name);
@@ -24,12 +17,6 @@ export class TracingService {
     metadata?: Record<string, unknown>,
   ): Promise<T> {
     const startTime = Date.now();
-    const context: TracingContext = {
-      operation,
-      service,
-      startTime,
-      metadata,
-    };
 
     this.logger.log(`Starting external call: ${operation}`, 'TracingService', {
       operation,

@@ -113,7 +113,7 @@ export class LedgerReconciliationService {
     );
 
     // Fetch on-chain data (simulated - would call Horizon API in production)
-    const onChainData = await this.fetchOnChainData(startLedger, endLedger);
+    const onChainData = this.fetchOnChainData(startLedger, endLedger);
 
     // Fetch stored ledger entries
     const storedEntries = await this.prisma.balanceLedger.findMany({
@@ -198,10 +198,7 @@ export class LedgerReconciliationService {
     };
   }
 
-  private fetchOnChainData(
-    _startLedger: number,
-    _endLedger: number,
-  ): any[] {
+  private fetchOnChainData(_startLedger: number, _endLedger: number): any[] {
     // Placeholder for actual Horizon API call
     // In production, this would query the Stellar Horizon API
     return [];
