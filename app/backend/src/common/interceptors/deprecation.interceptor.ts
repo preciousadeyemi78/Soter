@@ -5,7 +5,6 @@ import {
   CallHandler,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { Response } from 'express';
 import { getDeprecationMetadata } from '../decorators/deprecated.decorator';
 import { DEPRECATION_POLICY } from '../constants/api-version.constants';
@@ -33,12 +32,18 @@ export class DeprecationInterceptor implements NestInterceptor {
       // RFC Draft: https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-deprecation-header-02
       // Can be a boolean or a date
       const deprecationValue = metadata.deprecatedSince || 'true';
-      response.setHeader(DEPRECATION_POLICY.DEPRECATION_HEADER, deprecationValue);
+      response.setHeader(
+        DEPRECATION_POLICY.DEPRECATION_HEADER,
+        deprecationValue,
+      );
 
       // 2. Sunset Header
       // RFC 8594: https://tools.ietf.org/html/rfc8594
       if (metadata.sunsetDate) {
-        response.setHeader(DEPRECATION_POLICY.SUNSET_HEADER, metadata.sunsetDate);
+        response.setHeader(
+          DEPRECATION_POLICY.SUNSET_HEADER,
+          metadata.sunsetDate,
+        );
       }
 
       // 3. Link Header
