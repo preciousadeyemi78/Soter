@@ -11,7 +11,6 @@ import { Request, Response } from 'express';
 
 interface ExtendedRequest extends Request {
   requestId?: string;
-  user?: { sub?: string; id?: string; apiKeyId?: string };
 }
 
 @Injectable()
@@ -27,8 +26,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const method = request.method;
     const url = request.url;
     const requestId = request.headers['x-request-id'] as string;
-    const userId =
-      request.user?.sub || request.user?.id || request.user?.apiKeyId;
+    const userId = (request.user as any)?.sub || (request.user as any)?.id || (request.user as any)?.apiKeyId;
     const route = `${method} ${url}`;
     const startTime = Date.now();
 

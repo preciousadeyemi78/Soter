@@ -57,12 +57,10 @@ export class LedgerAdminController {
         campaignId: {
           type: 'string',
           description: 'Optional campaign ID to filter',
-          required: false,
         },
         batchSize: {
           type: 'number',
           description: 'Number of ledgers to process per batch (default: 100)',
-          required: false,
         },
       },
       required: ['startLedger', 'endLedger'],
@@ -165,12 +163,10 @@ export class LedgerAdminController {
         campaignId: {
           type: 'string',
           description: 'Optional campaign ID to filter',
-          required: false,
         },
         thresholdPercent: {
           type: 'number',
           description: 'Threshold percentage for amount mismatch (default: 5)',
-          required: false,
         },
       },
       required: ['startLedger', 'endLedger'],
