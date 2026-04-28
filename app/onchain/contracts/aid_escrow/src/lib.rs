@@ -1250,11 +1250,6 @@ mod tests {
         let recipient2 = Address::generate(&env);
 
         // Deploy a mock Stellar asset contract to use as the token.
-    fn test_action_specific_pause() {
-        let (env, client) = setup();
-        let admin = Address::generate(&env);
-        let recipient = Address::generate(&env);
-
         let token_id = env.register_stellar_asset_contract_v2(admin.clone());
         let token = token_id.address();
         let sac = StellarAssetClient::new(&env, &token);
@@ -1350,6 +1345,22 @@ mod tests {
         assert_eq!(last_page.len(), 2);
         assert!(last_page.contains(package_ids.get(5).unwrap()));
         assert!(last_page.contains(package_ids.get(6).unwrap()));
+    }
+
+    #[test]
+    fn test_action_specific_pause() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        let recipient = Address::generate(&env);
+
+        // Deploy a mock Stellar asset contract to use as the token.
+        let token_id = env.register_stellar_asset_contract_v2(admin.clone());
+        let token = token_id.address();
+        let sac = StellarAssetClient::new(&env, &token);
+
+        env.mock_all_auths();
+
+        // Initialise the escrow contract.
         client.init(&admin);
         sac.mint(&admin, &10_000);
         client.fund(&token, &admin, &5_000);
