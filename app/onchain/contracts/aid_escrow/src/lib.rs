@@ -377,8 +377,19 @@ impl AidEscrow {
         Ok(())
     }
 
-    /// Creates a package with a specific ID.
+    /// Creates a package with a specific ID and stores provided metadata.
     /// Locks funds from the available pool (Contract Balance - Total Locked).
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban environment
+    /// * `operator` - Address of the admin or distributor creating the package
+    /// * `id` - Unique package ID
+    /// * `recipient` - Address of the recipient
+    /// * `amount` - Amount to escrow
+    /// * `token` - Token contract address
+    /// * `expires_at` - Expiration timestamp (0 for no expiration)
+    /// * `metadata` - Arbitrary key-value metadata for the package
+    #[allow(clippy::too_many_arguments)]
     pub fn create_package(
         env: Env,
         operator: Address,
@@ -387,6 +398,7 @@ impl AidEscrow {
         amount: i128,
         token: Address,
         expires_at: u64,
+        metadata: Map<Symbol, String>,
     ) -> Result<u64, Error> {
         Self::check_paused(&env)?;
         Self::require_admin_or_distributor(&env, &operator)?;
@@ -447,7 +459,7 @@ impl AidEscrow {
             status: PackageStatus::Created,
             created_at,
             expires_at,
-            metadata: Map::new(&env),
+            metadata,
         };
 
         env.storage().persistent().set(&key, &package);
@@ -477,6 +489,15 @@ impl AidEscrow {
 
     /// Creates multiple packages in a single transaction for multiple recipients.
     /// Uses an auto-incrementing counter for package IDs.
+    ///
+    /// # Arguments
+    /// * `env` - The Soroban environment
+    /// * `operator` - Address of the admin or distributor creating the packages
+    /// * `recipients` - List of recipient addresses
+    /// * `amounts` - List of amounts to escrow (must match recipients)
+    /// * `token` - Token contract address
+    /// * `expires_in` - Expiry duration in seconds from now
+    /// * `metadatas` - List of metadata maps, one per package
     pub fn batch_create_packages(
         env: Env,
         operator: Address,
@@ -484,12 +505,13 @@ impl AidEscrow {
         amounts: Vec<i128>,
         token: Address,
         expires_in: u64,
+        metadatas: Vec<Map<Symbol, String>>,
     ) -> Result<Vec<u64>, Error> {
         Self::check_paused(&env)?;
         Self::require_admin_or_distributor(&env, &operator)?;
 
         // Validate array lengths match
-        if recipients.len() != amounts.len() {
+        if recipients.len() != amounts.len() || recipients.len() != metadatas.len() {
             return Err(Error::MismatchedArrays);
         }
 
@@ -517,6 +539,7 @@ impl AidEscrow {
         for i in 0..recipients.len() {
             let recipient = recipients.get(i).unwrap();
             let amount = amounts.get(i).unwrap();
+            let metadata = metadatas.get(i).unwrap();
 
             // Validate amount
             if amount <= 0 {
@@ -543,7 +566,7 @@ impl AidEscrow {
                 status: PackageStatus::Created,
                 created_at,
                 expires_at,
-                metadata: Map::new(&env),
+                metadata: metadata.clone(),
             };
 
             env.storage().persistent().set(&key, &package);
@@ -1118,8 +1141,18 @@ mod tests {
         // Confirm the contract holds the funded balance.
         assert_eq!(token_client.balance(&client.address), 5_000);
 
+        let package_metadata = Map::new(&env);
+
         let operator = admin.clone();
-        let package_id = client.create_package(&operator, &1, &recipient, &1000, &token, &86400);
+        let package_id = client.create_package(
+            &operator,
+            &1,
+            &recipient,
+            &1000,
+            &token,
+            &86400,
+            &package_metadata,
+        );
         client.cancel_package(&package_id);
 
         let package = client.get_package(&package_id);

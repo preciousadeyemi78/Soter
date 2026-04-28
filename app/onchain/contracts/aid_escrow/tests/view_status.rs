@@ -2,7 +2,7 @@
 
 use aid_escrow::{AidEscrow, AidEscrowClient, Error, PackageStatus};
 use soroban_sdk::{
-    Address, Env,
+    Address, Env, Map,
     testutils::Address as _,
     token::{StellarAssetClient, TokenClient},
 };
@@ -45,6 +45,7 @@ fn test_view_package_status() {
     let pkg_id = 1;
     let expires_at = env.ledger().timestamp() + 86400;
 
+    let metadata = Map::new(&env);
     client.create_package(
         &admin,
         &pkg_id,
@@ -52,6 +53,7 @@ fn test_view_package_status() {
         &1000,
         &token_client.address,
         &expires_at,
+        &metadata,
     );
 
     let status = client.view_package_status(&pkg_id);
