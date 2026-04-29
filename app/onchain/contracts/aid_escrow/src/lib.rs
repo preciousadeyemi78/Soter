@@ -1,8 +1,8 @@
 #![no_std]
 
 use soroban_sdk::{
-    Address, Env, Map, String, Symbol, Vec, contract, contracterror, contractevent, contractimpl,
-    contracttype, symbol_short, token,
+    contract, contracterror, contractevent, contractimpl, contracttype, symbol_short, token,
+    Address, Env, Map, String, Symbol, Vec,
 };
 
 // --- Storage Keys ---
@@ -1130,20 +1130,20 @@ impl AidEscrow {
             let idx_key = (symbol_short!("pidx"), i);
             if let Some(pkg_id) = env.storage().persistent().get::<_, u64>(&idx_key) {
                 let pkg_key = (symbol_short!("pkg"), pkg_id);
-                if let Some(package) = env.storage().persistent().get::<_, Package>(&pkg_key)
-                    && package.token == token
-                {
-                    match package.status {
-                        PackageStatus::Created => {
-                            total_committed += package.amount;
-                        }
-                        PackageStatus::Claimed => {
-                            total_claimed += package.amount;
-                        }
-                        PackageStatus::Expired
-                        | PackageStatus::Cancelled
-                        | PackageStatus::Refunded => {
-                            total_expired_cancelled += package.amount;
+                if let Some(package) = env.storage().persistent().get::<_, Package>(&pkg_key) {
+                    if package.token == token {
+                        match package.status {
+                            PackageStatus::Created => {
+                                total_committed += package.amount;
+                            }
+                            PackageStatus::Claimed => {
+                                total_claimed += package.amount;
+                            }
+                            PackageStatus::Expired
+                            | PackageStatus::Cancelled
+                            | PackageStatus::Refunded => {
+                                total_expired_cancelled += package.amount;
+                            }
                         }
                     }
                 }
@@ -1167,14 +1167,53 @@ impl AidEscrow {
 
         for id in 0..count {
             let key = (symbol_short!("pkg"), id);
-            if let Some(package) = env.storage().persistent().get::<_, Package>(&key)
-                && package.recipient == recipient
-            {
-                matches += 1;
+            if let Some(package) = env.storage().persistent().get::<_, Package>(&key) {
+                if package.recipient == recipient {
+                    matches += 1;
+                }
             }
         }
 
         matches
+    }
+
+    /// Lists package IDs for a specific recipient with pagination.
+    ///
+    /// # Arguments
+    /// * `recipient` - The address to filter packages by
+    /// * `cursor` - Starting position for pagination (0-indexed)
+    /// * `limit` - Maximum number of results to return
+    ///
+    /// # Returns
+    /// A Vec<u64> containing package IDs that belong to the recipient,
+    /// starting from the cursor position and limited by the limit parameter.
+    pub fn list_recipient_packages(
+        env: Env,
+        recipient: Address,
+        cursor: u64,
+        limit: u32,
+    ) -> Vec<u64> {
+        let package_counter: u64 = env.storage().instance().get(&KEY_PKG_COUNTER).unwrap_or(0);
+        let mut result: Vec<u64> = Vec::new(&env);
+
+        // Calculate the end position: cursor + limit or package_counter, whichever comes first
+        let end_pos = if cursor.saturating_add(limit as u64) > package_counter {
+            package_counter
+        } else {
+            cursor.saturating_add(limit as u64)
+        };
+
+        // Iterate from cursor to end_pos
+        for id in cursor..end_pos {
+            let key = (symbol_short!("pkg"), id);
+            if let Some(package) = env.storage().persistent().get::<_, Package>(&key) {
+                if package.recipient == recipient {
+                    result.push_back(id);
+                }
+            }
+        }
+
+        result
     }
 }
 
@@ -1183,9 +1222,9 @@ impl AidEscrow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::Env;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::token::{StellarAssetClient, TokenClient};
+    use soroban_sdk::Env;
 
     fn setup() -> (Env, AidEscrowClient<'static>) {
         let env = Env::default();
@@ -1237,16 +1276,167 @@ mod tests {
     }
 
     #[test]
-    fn test_action_specific_pause() {
+    fn test_list_recipient_packages_few_packages() {
         let (env, client) = setup();
         let admin = Address::generate(&env);
-        let recipient = Address::generate(&env);
+        let recipient1 = Address::generate(&env);
+        let recipient2 = Address::generate(&env);
 
+        // Deploy a mock Stellar asset contract to use as the token.
         let token_id = env.register_stellar_asset_contract_v2(admin.clone());
         let token = token_id.address();
         let sac = StellarAssetClient::new(&env, &token);
 
         env.mock_all_auths();
+
+        // Initialise the escrow contract.
+        client.init(&admin);
+
+        // Mint tokens to admin and fund the escrow pool.
+        sac.mint(&admin, &10_000);
+        client.fund(&token, &admin, &10_000);
+
+        // Create packages for recipient1 (3 packages) and recipient2 (2 packages)
+        let operator = admin.clone();
+        let empty_metadata = Map::new(&env);
+        let package1_id = client.create_package(
+            &operator,
+            &1,
+            &recipient1,
+            &1000,
+            &token,
+            &86400,
+            &empty_metadata,
+        );
+        let package2_id = client.create_package(
+            &operator,
+            &2,
+            &recipient1,
+            &1500,
+            &token,
+            &86400,
+            &empty_metadata,
+        );
+        let package3_id = client.create_package(
+            &operator,
+            &3,
+            &recipient1,
+            &2000,
+            &token,
+            &86400,
+            &empty_metadata,
+        );
+        let package4_id = client.create_package(
+            &operator,
+            &4,
+            &recipient2,
+            &1200,
+            &token,
+            &86400,
+            &empty_metadata,
+        );
+        let package5_id = client.create_package(
+            &operator,
+            &5,
+            &recipient2,
+            &1800,
+            &token,
+            &86400,
+            &empty_metadata,
+        );
+
+        // Test listing recipient1's packages with limit 10 (more than they have)
+        let packages = client.list_recipient_packages(&recipient1, &0, &10);
+        assert_eq!(packages.len(), 3);
+        assert!(packages.contains(package1_id));
+        assert!(packages.contains(package2_id));
+        assert!(packages.contains(package3_id));
+
+        // Test listing recipient2's packages with limit 10 (more than they have)
+        let packages = client.list_recipient_packages(&recipient2, &0, &10);
+        assert_eq!(packages.len(), 2);
+        assert!(packages.contains(package4_id));
+        assert!(packages.contains(package5_id));
+    }
+
+    #[test]
+    fn test_list_recipient_packages_pagination() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        let recipient = Address::generate(&env);
+
+        // Deploy a mock Stellar asset contract to use as the token.
+        let token_id = env.register_stellar_asset_contract_v2(admin.clone());
+        let token = token_id.address();
+        let sac = StellarAssetClient::new(&env, &token);
+
+        env.mock_all_auths();
+
+        // Initialise the escrow contract.
+        client.init(&admin);
+
+        // Mint tokens to admin and fund the escrow pool.
+        sac.mint(&admin, &20_000);
+        client.fund(&token, &admin, &15_000);
+
+        // Create 7 packages for the recipient
+        let operator = admin.clone();
+        let mut package_ids: soroban_sdk::Vec<u64> = soroban_sdk::Vec::new(&env);
+        let empty_metadata = Map::new(&env);
+        for i in 0..7 {
+            package_ids.push_back(client.create_package(
+                &operator,
+                &i,
+                &recipient,
+                &(1000 + i as i128 * 100),
+                &token,
+                &86400,
+                &empty_metadata,
+            ));
+        }
+
+        // Test pagination with limit 3
+        let page1 = client.list_recipient_packages(&recipient, &0, &3);
+        assert_eq!(page1.len(), 3);
+        assert!(page1.contains(package_ids.get(0).unwrap()));
+        assert!(page1.contains(package_ids.get(1).unwrap()));
+        assert!(page1.contains(package_ids.get(2).unwrap()));
+
+        let page2 = client.list_recipient_packages(&recipient, &3, &3);
+        assert_eq!(page2.len(), 3);
+        assert!(page2.contains(package_ids.get(3).unwrap()));
+        assert!(page2.contains(package_ids.get(4).unwrap()));
+        assert!(page2.contains(package_ids.get(5).unwrap()));
+
+        let page3 = client.list_recipient_packages(&recipient, &6, &3);
+        assert_eq!(page3.len(), 1);
+        assert!(page3.contains(package_ids.get(6).unwrap()));
+
+        // Test cursor beyond available packages
+        let empty_page = client.list_recipient_packages(&recipient, &10, &3);
+        assert_eq!(empty_page.len(), 0);
+
+        // Test limit that exceeds remaining packages
+        let last_page = client.list_recipient_packages(&recipient, &5, &10);
+        assert_eq!(last_page.len(), 2);
+        assert!(last_page.contains(package_ids.get(5).unwrap()));
+        assert!(last_page.contains(package_ids.get(6).unwrap()));
+    }
+
+    #[test]
+    fn test_action_specific_pause() {
+        let (env, client) = setup();
+        let admin = Address::generate(&env);
+        let recipient = Address::generate(&env);
+
+        // Deploy a mock Stellar asset contract to use as the token.
+        let token_id = env.register_stellar_asset_contract_v2(admin.clone());
+        let token = token_id.address();
+        let sac = StellarAssetClient::new(&env, &token);
+
+        env.mock_all_auths();
+
+        // Initialise the escrow contract.
         client.init(&admin);
         sac.mint(&admin, &10_000);
         client.fund(&token, &admin, &5_000);
